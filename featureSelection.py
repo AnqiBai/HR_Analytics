@@ -18,19 +18,26 @@ warnings.filterwarnings("ignore")
 def greet():
     return 'Greeting! from feature selection'
 
-def update_FS(count_of_feature, path_to_raw_data):
+def update_FS(count_of_feature, path_to_raw_data, department, datasetid):
     # prepare
-    application_train = pd.read_csv(path_to_raw_data)
+    application_raw = pd.read_csv(path_to_raw_data)
+    
+    if department != '(All)':
+        con1 = application_raw['department'] == department
+        application_train = application_raw[con1]
+    else:
+        application_train = application_raw
+    #application_train = application_raw
     application_train.head()
     application_train.columns
 
     target = 'left'
     # Stratified Sampling
     application_sample1 = application_train.loc[application_train[target] == 1].sample(
-        frac=0.5, replace=False)
+        frac=1, replace=False)
     print('label 1 sample size:', str(application_sample1.shape[0]))
     application_sample0 = application_train.loc[application_train[target] == 0].sample(
-        frac=0.5, replace=False)
+        frac=1, replace=False)
     print('label 0 sample size:', str(application_sample0.shape[0]))
     application = pd.concat([application_sample1, application_sample0], axis=0)
 
@@ -124,7 +131,7 @@ def update_FS(count_of_feature, path_to_raw_data):
 
     # 3.3 LightGBM
 
-    lgbc = LGBMClassifier(n_estimators=count_of_feature, learning_rate=0.05, num_leaves=count_of_feature*2, colsample_bytree=0.2,
+    lgbc = LGBMClassifier(n_estimators=count_of_feature, learning_rate=0.03, num_leaves=count_of_feature*2, colsample_bytree=0.2,
                           reg_alpha=3, reg_lambda=1, min_split_gain=0.01, min_child_weight=40)
 
     embeded_lgb_selector = SelectFromModel(lgbc, threshold='1.25*median')
@@ -161,13 +168,26 @@ def update_FS(count_of_feature, path_to_raw_data):
     conn = microstrategy.Connection(base_url, username, password, project_name)
     conn.connect()
 
-    dataset_id_to_update = 'A71524DE409F4066DDAB9EBAE2584728'
-    # conn.create_dataset(data_frame=feature_selection_df, dataset_name='featureSelection', table_name='features')
+    #dataset_id_to_update = 'A71524DE409F4066DDAB9EBAE2584728' group1  4A567F1346CD3DD0CE27F1BF5FFFB151
+    #dataset_id_to_update = 'F93FAC874BD8A0573BC4A899D68C78C3' group2  EA010C7744F61DA71112A18F02BFA169
+    dataset_id_to_update = datasetid
+    if datasetid == 'A71524DE409F4066DDAB9EBAE2584728':
+        label_dataset_id = '4A567F1346CD3DD0CE27F1BF5FFFB151'
+        label = [department]
+        df_label = pd.DataFrame(label, columns=['department1'])
+    else:
+        label_dataset_id = 'EA010C7744F61DA71112A18F02BFA169'
+        label = [department]
+        df_label = pd.DataFrame(label, columns=['department2'])
+    #conn.create_dataset(data_frame=feature_selection_df[:count_of_feature], dataset_name='featureSelection', table_name='features')
     conn.update_dataset(data_frame = feature_selection_df[:count_of_feature], dataset_id = dataset_id_to_update, 
                         table_name = 'features', update_policy = 'replace')
-
+    
+    conn.update_dataset(data_frame=df_label, dataset_id=label_dataset_id,
+                        table_name='group', update_policy='replace')
     #log out
     conn.close()
-
-    return 'Updated'
+   
+    return 'updated'
+    
 

@@ -1,6 +1,7 @@
 import featureSelection as FS
 
 from flask import Flask, escape, url_for
+import flask 
 
 app = Flask(__name__)
 
@@ -15,14 +16,12 @@ def index():
 def login():
     return 'login'
 
-@app.route('/update_std_FS/<count_of_feature>')
-def update_std_FS(count_of_feature):
-    return FS.update_FS(int(count_of_feature), './HR.csv')
-
-
-@app.route('/update_adv_FS/<count_of_feature>')
-def update_adv_FS(count_of_feature):
-    return FS.update_FS(int(count_of_feature), './HR_adv.csv')
+@app.route('/update_std_FS/<count_of_feature>/<department>/<datasetid>')
+def update_std_FS(count_of_feature, department, datasetid):
+    FS.update_FS(int(count_of_feature), './HR.csv', department, datasetid)
+    response = flask.jsonify({'some': 'data'})
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
 
 
 @app.route('/user/<username>')
